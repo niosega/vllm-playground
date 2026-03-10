@@ -736,6 +736,7 @@ class VLLMContainerManager:
                 logger.info(f"vLLM arguments: {' '.join(config['vllm_args'])}")
 
             # Run container
+            logger.info(f"Podman command: {podman_cmd}")
             result = await self._run_podman_cmd_async(*podman_cmd)
             container_id = result.stdout.strip()
 
