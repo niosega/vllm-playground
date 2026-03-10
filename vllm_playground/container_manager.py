@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import time
 from typing import Optional, Dict, Any, AsyncIterator
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,15 @@ def detect_container_runtime() -> Optional[str]:
     logger.warning("No container runtime found (neither podman nor docker available)")
     return None
 
+def is_dgx() -> bool:
+    product_file = Path("/sys/devices/virtual/dmi/id/product_name")
+
+    try:
+        name = product_file.read_text().strip().lower()
+        return "dgx" in name or "gb10" in name
+    except (FileNotFoundError, PermissionError):
+        return False
+
 
 class VLLMContainerManager:
     """Manages vLLM container lifecycle using Podman CLI"""
@@ -52,6 +62,7 @@ class VLLMContainerManager:
     DEFAULT_IMAGE_GPU_NVIDIA = "docker.io/vllm/vllm-openai:v0.12.0"  # Official vLLM CUDA image (linux/amd64)
     DEFAULT_IMAGE_GPU_AMD = "docker.io/rocm/vllm:latest"  # Official vLLM ROCm image from AMD
     DEFAULT_IMAGE_GPU_TPU = "docker.io/vllm/vllm-tpu:latest"  # Official vLLM TPU image for Google Cloud TPU
+    DEFAULT_IMAGE_GPU_GB10 = "nvcr.io/nvidia/vllm:26.01-py3" # Official vLLM image from NVIDIA
     # CPU images by platform
     DEFAULT_IMAGE_CPU_MACOS = "quay.io/rh_ee_micyang/vllm-mac:v0.11.0"  # CPU image for macOS (linux/arm64)
     DEFAULT_IMAGE_CPU_X86 = "quay.io/rh_ee_micyang/vllm-cpu:v0.11.0"  # CPU image for x86_64 Linux
@@ -136,6 +147,9 @@ class VLLMContainerManager:
         elif accelerator == "tpu":
             logger.info("Using Google Cloud TPU image")
             return self.DEFAULT_IMAGE_GPU_TPU
+        elif accelerator == "nvidia" and is_dgx():
+            logger.info("Using NVIDIA CUDA NGC image")
+            return self.DEFAULT_IMAGE_GPU_GB10
         else:
             # Default to NVIDIA
             logger.info("Using NVIDIA CUDA GPU image")
