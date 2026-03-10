@@ -729,7 +729,7 @@ class VLLMContainerManager:
             # NVIDIA vllm-openai image has entrypoint, but AMD/TPU images need explicit command
             if config.get("vllm_args"):
                 # AMD ROCm and TPU images don't have automatic entrypoint - need to call vllm serve
-                if accelerator in ("amd", "tpu"):
+                if accelerator in ("amd", "tpu") or is_dgx():
                     podman_cmd.extend(["vllm", "serve"])
                     logger.info(f"Using 'vllm serve' command for {accelerator.upper()} container")
                 podman_cmd.extend(config["vllm_args"])
